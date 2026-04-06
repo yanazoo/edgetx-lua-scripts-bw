@@ -172,7 +172,7 @@ local function run_func(event)
     lcd.drawText(6, 6, "ELRS Finder", MIDSIZE)
 
     -- Source + raw reading
-    lcd.drawText(6, 30, string.format("Src:%-3s  Raw:%d dBm", kind, raw), 0)
+    lcd.drawText(6, 30, string.format("Src:%-3s  Raw:%.1f dBm", kind, raw), 0)
 
     -- Strength bar
     lcd.drawRectangle(6, 50, 214, 16)
@@ -181,7 +181,7 @@ local function run_func(event)
     lcd.drawText(224, 52, string.format("%d%%", math.floor(strength)), 0)
 
     -- Averaged dBm
-    lcd.drawText(6, 74, string.format("Avg: %d dBm", math.floor(avg)), 0)
+    lcd.drawText(6, 74, string.format("Avg: %.1f dBm", avg), 0)
 
     -- Current scan direction
     lcd.drawText(6, 98, "Scan dir:", 0)
@@ -217,12 +217,12 @@ local function run_func(event)
 
     lcd.drawText(2,  2,  "ELRS Finder", MIDSIZE)
     lcd.drawText(2,  18, string.format("Src:%s", kind), 0)
-    lcd.drawText(60, 18, string.format("Raw:%d", raw), 0)
+    lcd.drawText(60, 18, string.format("Raw:%.1f", raw), 0)
     lcd.drawText(2,  30, "Strength:", 0)
     lcd.drawRectangle(58, 30, 66, 10)
     local bar_bw = math.floor(strength * 64 / 100)
     lcd.drawFilledRectangle(59, 31, bar_bw, 8, 0)
-    lcd.drawText(2, 44, string.format("Avg dBm est:%d", math.floor(avg)), 0)
+    lcd.drawText(2, 44, string.format("Avg:%.1f dBm", avg), 0)
 
     -- Direction info (compact, fits 128 px wide)
     lcd.drawText(2,  54, "Sc:", 0)
