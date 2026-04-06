@@ -15,17 +15,17 @@ local PI       = math.pi or 3.14159265
 
 -- ── Signal state ──────────────────────────────────────────────────────
 local lastBeep = 0
-local avg      = -120
+local avg      = nil    -- nil = not yet initialised; set to first real reading
 local have     = { rssi=false, snr=false, rql=false }
 
 local function readSignal()
   local rssi = getValue("1RSS")          -- CRSF dBm, typically -95..-40
-  if rssi and rssi ~= 0 then have.rssi=true; return rssi, "dBm" end
+  if type(rssi) == "number" and rssi ~= 0 then have.rssi=true; return rssi, "dBm" end
   local snr  = getValue("RSNR")          -- SNR dB, -20..+20
-  if snr  and snr  ~= 0 then have.snr=true;  return (snr*2-120), "SNR" end
+  if type(snr)  == "number" and snr  ~= 0 then have.snr=true;  return (snr*2-120), "SNR" end
   local rql  = getValue("RQly")          -- Link quality 0..100 %
-  if rql  and rql  ~= 0 then have.rql=true;  return (rql-120),   "LQ"  end
-  return -120, "NA"
+  if type(rql)  == "number" and rql  ~= 0 then have.rql=true;  return (rql-120),   "LQ"  end
+  return nil, "NA"    -- no telemetry available
 end
 
 local function clamp(x, a, b)
@@ -39,13 +39,6 @@ local DIR_ARR = { "^", "^>", ">", "v>", "v", "<v", "<", "<^" }
 
 local dir_strengths = { -1, -1, -1, -1, -1, -1, -1, -1 }  -- peak 0-100 per dir; -1 = not yet scanned
 local cur_dir = 1  -- 1=N, 2=NE … 8=NW, clockwise
-
--- Navigation arrow: how to turn from cur_dir to face best_dir
--- diff=0 → "^" (already facing it), diff=1 → "^>" (turn right 45°), etc.
-local function navArrow(cur, best)
-  local diff = (best - cur + 8) % 8
-  return DIR_ARR[diff + 1]
-end
 
 -- ── Event aliases (covers multiple EdgeTX builds) ─────────────────────
 local EVT_NEXT  = EVT_VIRTUAL_NEXT or 0x0305
@@ -141,12 +134,17 @@ local function run_func(event)
 
   -- Signal processing
   local raw, kind = readSignal()
-  avg = 0.8 * avg + 0.2 * raw   -- exponential moving average
-  local strength = clamp((avg + 110) * (100 / 70), 0, 100)   -- -110→0, -40→100
+  local strength = 0
+  if raw then
+    -- Initialise EMA from the first real reading to avoid cold-start lag
+    if avg == nil then avg = raw end
+    avg = 0.8 * avg + 0.2 * raw   -- exponential moving average
+    strength = clamp((avg + 110) * (100 / 70), 0, 100)   -- -110→0, -40→100
 
-  -- Peak-hold: record best signal seen for current facing direction
-  if strength > dir_strengths[cur_dir] then
-    dir_strengths[cur_dir] = strength
+    -- Peak-hold: only record when real telemetry is present
+    if strength > dir_strengths[cur_dir] then
+      dir_strengths[cur_dir] = strength
+    end
   end
 
   -- Determine direction with strongest recorded signal
@@ -178,8 +176,10 @@ local function run_func(event)
     -- Title
     lcd.drawText(6, 6, "ELRS Finder", MIDSIZE)
 
-    -- Source + raw reading
-    lcd.drawText(6, 30, string.format("Src:%-3s  Raw:%.1f dBm", kind, raw), 0)
+    -- Source + raw reading (raw/avg may be nil before first telemetry)
+    lcd.drawText(6, 30, raw
+      and string.format("Src:%-3s  Raw:%.1f dBm", kind, raw)
+      or  "Src:NA  (waiting...)", 0)
 
     -- Strength bar
     lcd.drawRectangle(6, 50, 214, 16)
@@ -188,17 +188,19 @@ local function run_func(event)
     lcd.drawText(224, 52, string.format("%d%%", math.floor(strength)), 0)
 
     -- Averaged dBm
-    lcd.drawText(6, 74, string.format("Avg: %.1f dBm", avg), 0)
+    lcd.drawText(6, 74, avg
+      and string.format("Avg: %.1f dBm", avg)
+      or  "Avg: ---", 0)
 
     -- Current scan direction
     lcd.drawText(6, 98, "Scan dir:", 0)
     lcd.drawText(72, 98, DIRS[cur_dir], INVERS)
 
-    -- Best direction + navigation arrow (how to turn to face best signal)
+    -- Best direction (simple compass arrow pointing toward the signal)
     lcd.drawText(6, 118, "Best dir:", 0)
     if has_best then
       lcd.drawText(72, 118, DIRS[best_dir], 0)
-      lcd.drawText(92, 118, navArrow(cur_dir, best_dir), 0)
+      lcd.drawText(92, 118, DIR_ARR[best_dir], 0)
     else
       lcd.drawText(72, 118, "---", 0)
     end
@@ -223,12 +225,12 @@ local function run_func(event)
 
     lcd.drawText(2,  2,  "ELRS Finder", MIDSIZE)
     lcd.drawText(2,  18, string.format("Src:%s", kind), 0)
-    lcd.drawText(60, 18, string.format("Raw:%.1f", raw), 0)
+    lcd.drawText(60, 18, raw  and string.format("Raw:%.1f", raw)      or "---", 0)
     lcd.drawText(2,  30, "Strength:", 0)
     lcd.drawRectangle(58, 30, 66, 10)
     local bar_bw = math.floor(strength * 64 / 100)
     lcd.drawFilledRectangle(59, 31, bar_bw, 8, 0)
-    lcd.drawText(2, 44, string.format("Avg:%.1f dBm", avg), 0)
+    lcd.drawText(2, 44, avg  and string.format("Avg:%.1f dBm", avg)   or "Avg:--- dBm", 0)
 
     -- Direction info (compact, fits 128 px wide)
     lcd.drawText(2,  54, "Sc:", 0)
@@ -236,7 +238,7 @@ local function run_func(event)
     lcd.drawText(40, 54, "Bst:", 0)
     lcd.drawText(66, 54, has_best and DIRS[best_dir] or "--", 0)
     if has_best then
-      lcd.drawText(82, 54, navArrow(cur_dir, best_dir), 0)
+      lcd.drawText(82, 54, DIR_ARR[best_dir], 0)
     end
   end
 
