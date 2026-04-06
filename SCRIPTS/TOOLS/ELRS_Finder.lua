@@ -40,6 +40,13 @@ local DIR_ARR = { "^", "^>", ">", "v>", "v", "<v", "<", "<^" }
 local dir_strengths = { -1, -1, -1, -1, -1, -1, -1, -1 }  -- peak 0-100 per dir; -1 = not yet scanned
 local cur_dir = 1  -- 1=N, 2=NE … 8=NW, clockwise
 
+-- Navigation arrow: how to turn from cur_dir to face best_dir
+-- diff=0 → "^" (already facing it), diff=1 → "^>" (turn right 45°), etc.
+local function navArrow(cur, best)
+  local diff = (best - cur + 8) % 8
+  return DIR_ARR[diff + 1]
+end
+
 -- ── Event aliases (covers multiple EdgeTX builds) ─────────────────────
 local EVT_NEXT  = EVT_VIRTUAL_NEXT or 0x0305
 local EVT_PREV  = EVT_VIRTUAL_PREV or 0x0304
@@ -186,13 +193,12 @@ local function run_func(event)
     -- Current scan direction
     lcd.drawText(6, 98, "Scan dir:", 0)
     lcd.drawText(72, 98, DIRS[cur_dir], INVERS)
-    lcd.drawText(92, 98, DIR_ARR[cur_dir], 0)
 
-    -- Best direction
+    -- Best direction + navigation arrow (how to turn to face best signal)
     lcd.drawText(6, 118, "Best dir:", 0)
     if has_best then
       lcd.drawText(72, 118, DIRS[best_dir], 0)
-      lcd.drawText(92, 118, DIR_ARR[best_dir], 0)
+      lcd.drawText(92, 118, navArrow(cur_dir, best_dir), 0)
     else
       lcd.drawText(72, 118, "---", 0)
     end
@@ -229,6 +235,9 @@ local function run_func(event)
     lcd.drawText(22, 54, DIRS[cur_dir], INVERS)
     lcd.drawText(40, 54, "Bst:", 0)
     lcd.drawText(66, 54, has_best and DIRS[best_dir] or "--", 0)
+    if has_best then
+      lcd.drawText(82, 54, navArrow(cur_dir, best_dir), 0)
+    end
   end
 
   return 0
