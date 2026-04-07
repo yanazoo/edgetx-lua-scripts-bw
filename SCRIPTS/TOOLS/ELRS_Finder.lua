@@ -63,10 +63,10 @@ local function run_func(event)
     avg = nil; fast_ema = nil; slow_ema = nil; peak_str = 0
   end
 
-  -- Reset on touch in right panel (x >= 240)
+  -- Reset on touch inside pyramid area (CX=360 ±50px wide, y=45-165)
   if IS_LARGE and EVT_TOUCH ~= 0 and event == EVT_TOUCH then
     local ts = rawget(_G, "touchState") and touchState()
-    if ts and ts.x >= 240 then
+    if ts and ts.x >= 310 and ts.x <= 410 and ts.y >= 45 and ts.y <= 165 then
       avg = nil; fast_ema = nil; slow_ema = nil; peak_str = 0
     end
   end
