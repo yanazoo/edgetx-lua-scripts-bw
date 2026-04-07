@@ -1,9 +1,9 @@
 -- ELRS_Finder.lua  (EdgeTX – Boxer B/W + TX15 MAX)
 -- Lost-model finder  ·  Geiger beep  +  signal strength pyramid
 --
--- Pyramid (right panel): bars = signal TREND (fast_ema vs slow_ema)
---   5 bars = MAX  → approaching the drone  (keep going!)
---   0 bars = none → moving away from drone (turn around!)
+-- Pyramid (right panel): bars = Now vs Peak gap
+--   5 bars = MAX  → at/near peak OR peak>=90% (keep going! / very close)
+--   0 bars = none → far below peak (turn around!)
 --
 -- Reset: ENT key  OR  tap anywhere in right panel (TX15 MAX touch)
 
@@ -137,20 +137,22 @@ local function run_func(event)
     -- Header: "TREND" centered in right panel (panel center = 360, MIDSIZE ~16px/char × 5 = ~80px)
     lcd.drawText(CX - 40, 8, "TREND", MIDSIZE)
 
-    -- Pyramid: bars 0-5 based on TREND (fast_ema - slow_ema)
-    --   positive diff  → approaching → more bars (up to 5)
-    --   negative diff  → moving away → fewer bars (down to 0)
-    --   diff ≈ 0       → stable     → 3 bars (neutral)
+    -- Pyramid: bars 0-5 based on (Now - Peak) gap
+    --   gap = 0        → at peak (approaching or just arrived) → 5 bars
+    --   gap negative   → below peak (moved away)              → fewer bars
+    --   peak >= 90%    → very close to drone                  → 5 bars (MAX)
     -- y_bottom=160; full pyramid (5 bars) spans y=58 to y=159
     local bars = 0
     if raw then
-      local diff = fast_ema - slow_ema
-      if   diff >  10 then bars = 5
-      elseif diff >  4 then bars = 4
-      elseif diff > -2 then bars = 3
-      elseif diff > -6 then bars = 2
-      elseif diff > -10 then bars = 1
-      else                   bars = 0
+      local gap = strength - peak_str   -- 0 at peak, negative when moved away
+      if peak_str >= 90 then
+        bars = 5                         -- peak near 100% = drone is very close
+      elseif gap >= -5  then bars = 5   -- currently at/near peak → approaching
+      elseif gap >= -15 then bars = 4
+      elseif gap >= -30 then bars = 3
+      elseif gap >= -50 then bars = 2
+      elseif gap >= -70 then bars = 1
+      else                   bars = 0   -- far below peak → turn around
       end
     end
     drawPyramid(CX, 160, bars)
