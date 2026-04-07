@@ -37,7 +37,8 @@ local peak_str  = 0     -- all-time peak strength 0-100 %
 
 -- ── Events ───────────────────────────────────────────────────────────
 local EVT_ENT   = EVT_ENTER_BREAK or 0x0059
-local EVT_TOUCH = rawget(_G, "EVT_TOUCH_FIRST") or 0
+-- Direct env lookup (rawget bypasses EdgeTX sandbox metamethods → wrong)
+local EVT_TOUCH = EVT_TOUCH_FIRST or 0
 
 -- ── Pyramid drawing (TX15 MAX) ────────────────────────────────────────
 -- bars 0-5: drawn from bottom (widest) upward.  y_bottom = bottom edge.
@@ -65,7 +66,8 @@ local function run_func(event)
 
   -- Reset on touch inside pyramid area (CX=360 ±50px wide, y=45-165)
   if IS_LARGE and EVT_TOUCH ~= 0 and event == EVT_TOUCH then
-    local ts = rawget(_G, "touchState") and touchState()
+    -- Use type() check: rawget(_G,...) fails in EdgeTX sandbox environment
+    local ts = type(touchState) == "function" and touchState() or nil
     if ts and ts.x >= 310 and ts.x <= 410 and ts.y >= 45 and ts.y <= 165 then
       avg = nil; fast_ema = nil; slow_ema = nil; peak_str = 0
     end
@@ -76,7 +78,7 @@ local function run_func(event)
   local strength = 0
   if raw then
     if avg      == nil then avg      = raw end
-    avg = 0.8 * avg + 0.2 * raw
+    avg = 0.65 * avg + 0.35 * raw   -- α=0.35: ~2 frame response (was 0.2 = too slow)
     local str = clamp((avg + 110) * (100 / 70), 0, 100)
     if fast_ema == nil then fast_ema = str end
     if slow_ema == nil then slow_ema = str end
@@ -146,13 +148,13 @@ local function run_func(event)
     if raw then
       local gap = strength - peak_str   -- 0 at peak, negative when moved away
       if peak_str >= 90 then
-        bars = 5                         -- peak near 100% = drone is very close
-      elseif gap >= -5  then bars = 5   -- currently at/near peak → approaching
-      elseif gap >= -15 then bars = 4
-      elseif gap >= -30 then bars = 3
-      elseif gap >= -50 then bars = 2
-      elseif gap >= -70 then bars = 1
-      else                   bars = 0   -- far below peak → turn around
+        bars = 5                        -- peak near 100% = drone is very close
+      elseif gap >= -3  then bars = 5  -- at/near peak → approaching (tightened from -5)
+      elseif gap >= -8  then bars = 4  -- slight drop
+      elseif gap >= -18 then bars = 3  -- moderate drop
+      elseif gap >= -35 then bars = 2  -- significant drop
+      elseif gap >= -55 then bars = 1  -- large drop
+      else                   bars = 0  -- far below peak → turn around
       end
     end
     drawPyramid(CX, 160, bars)
