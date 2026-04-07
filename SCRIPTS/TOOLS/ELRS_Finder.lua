@@ -70,13 +70,16 @@ local function run_func(event)
     if avg      == nil then avg      = raw end
     avg = 0.50 * avg + 0.50 * raw   -- α=0.50: ~1 frame response (agile)
     -- Map dBm to %: range -110..-43 dBm → 0..100%
-    local str = clamp((avg + 110) * (100 / 67), 0, 100)
+    -- Use unclamped str_raw for peak tracking so signal above -43 dBm
+    -- doesn't lock peak at 100 and kill the gap indicator
+    local str_raw = (avg + 110) * (100 / 67)
+    local str     = clamp(str_raw, 0, 100)
     if fast_ema == nil then fast_ema = str end
     if slow_ema == nil then slow_ema = str end
     fast_ema = 0.50 * fast_ema + 0.50 * str
     slow_ema = 0.92 * slow_ema + 0.08 * str
     strength = str
-    if str > peak_str then peak_str = str end
+    if str_raw > peak_str then peak_str = str_raw end  -- track unclamped!
   end
 
   -- Geiger-counter beep
@@ -111,7 +114,7 @@ local function run_func(event)
       and string.format("Avg: %.1f dBm", avg)
       or  "Avg: ---", 0)
 
-    lcd.drawText(6, 118, string.format("Peak: %d%%", math.floor(peak_str)), 0)
+    lcd.drawText(6, 118, string.format("Peak: %d%%", math.floor(math.min(peak_str, 100))), 0)
     if raw and peak_str > 0 then
       lcd.drawText(6, 134, string.format("Gap:  %+d%%",
         math.floor(strength - peak_str)), 0)
@@ -137,14 +140,13 @@ local function run_func(event)
     -- y_bottom=160; full pyramid (5 bars) spans y=58 to y=159
     local bars = 0
     if raw then
-      local gap = strength - peak_str   -- 0 at peak, negative when moved away
-      if strength >= 90 then
-        bars = 5                        -- current signal near 100% = drone is very close
-      elseif gap >= -3  then bars = 5  -- at/near peak → approaching
-      elseif gap >= -8  then bars = 4  -- slight drop
-      elseif gap >= -18 then bars = 3  -- moderate drop
-      elseif gap >= -35 then bars = 2  -- significant drop
-      elseif gap >= -55 then bars = 1  -- large drop
+      -- gap uses unclamped peak_str so signal above -43 dBm doesn't lock peak at 100
+      local gap = strength - peak_str
+      if   gap >= -3  then bars = 5  -- at/near peak → approaching
+      elseif gap >= -8  then bars = 4
+      elseif gap >= -18 then bars = 3
+      elseif gap >= -35 then bars = 2
+      elseif gap >= -55 then bars = 1
       else                   bars = 0  -- far below peak → turn around
       end
     end
@@ -157,11 +159,12 @@ local function run_func(event)
     local BH = 14         -- bar height
 
     -- Peak: label at y=170, bar at y=188 (gap avoids overlap even with large fonts)
+    local disp_peak = math.min(peak_str, 100)   -- display capped at 100%
     lcd.drawText(BX, 170,
-      string.format("Peak: %d%%", math.floor(peak_str)), 0)
+      string.format("Peak: %d%%", math.floor(disp_peak)), 0)
     lcd.drawRectangle(BX, 188, BW, BH)
     lcd.drawFilledRectangle(BX+1, 189,
-      math.floor(peak_str * (BW-2) / 100), BH-2, 0)
+      math.floor(disp_peak * (BW-2) / 100), BH-2, 0)
 
     -- Now: label at y=208, bar at y=226
     lcd.drawText(BX, 208,
