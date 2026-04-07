@@ -5,7 +5,7 @@
 --   5 bars = MAX  → at/near peak OR peak>=90% (keep going! / very close)
 --   0 bars = none → far below peak (turn around!)
 --
--- Reset: ENT key  OR  tap anywhere in right panel (TX15 MAX touch)
+-- Reset: ENT key  OR  tap [RESET] button (bottom-center of right panel, TX15 MAX)
 
 -- ── Screen detection ──────────────────────────────────────────────────
 local W        = LCD_W or 128
@@ -63,11 +63,12 @@ local function run_func(event)
     avg = nil; fast_ema = nil; slow_ema = nil; peak_str = 0
   end
 
-  -- Reset on tap in pyramid area: poll-based (event constants unreliable on TX15 MAX)
+  -- Reset on tap [RESET] button (right panel bottom-center): poll-based
   if IS_LARGE and type(touchState) == "function" then
     local ts = touchState()
-    if ts and not wasTouched then   -- leading edge only (first frame of new touch)
-      if ts.x >= 310 and ts.x <= 410 and ts.y >= 45 and ts.y <= 165 then
+    if ts and not wasTouched then   -- leading edge: first frame of new touch only
+      -- Button area: x=320-400 (CX±40), y=246-268
+      if ts.x >= 320 and ts.x <= 400 and ts.y >= 246 and ts.y <= 268 then
         avg = nil; fast_ema = nil; slow_ema = nil; peak_str = 0
       end
     end
@@ -79,7 +80,7 @@ local function run_func(event)
   local strength = 0
   if raw then
     if avg      == nil then avg      = raw end
-    avg = 0.65 * avg + 0.35 * raw   -- α=0.35: ~2 frame response (was 0.2 = too slow)
+    avg = 0.50 * avg + 0.50 * raw   -- α=0.50: ~1 frame response (agile)
     local str = clamp((avg + 110) * (100 / 70), 0, 100)
     if fast_ema == nil then fast_ema = str end
     if slow_ema == nil then slow_ema = str end
@@ -127,7 +128,7 @@ local function run_func(event)
         math.floor(strength - peak_str)), 0)
     end
 
-    lcd.drawText(6, 160, "ENT or tap: reset", 0)
+    lcd.drawText(6, 160, "ENT or [RESET]: reset", 0)
     lcd.drawText(6, 180, "Walk & watch pyramid", 0)
     lcd.drawText(6, 200, "5 bars = max signal", 0)
 
@@ -180,6 +181,11 @@ local function run_func(event)
     lcd.drawFilledRectangle(BX+1, 227,
       math.floor(strength * (BW-2) / 100), BH-2, 0)
     -- Now bar bottom: y=226+14-1=239  (<272) ✓
+
+    -- ── RESET button: bottom-center of right panel ───────────────────────
+    -- x=320-400 (CX±40), y=246-268  (bottom edge y=268 < H=272)
+    lcd.drawRectangle(320, 246, 80, 22)
+    lcd.drawText(CX - 17, 251, "RESET", 0)
 
   else
     --------------------------------------------------------------------------
