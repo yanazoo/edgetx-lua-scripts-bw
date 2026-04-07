@@ -1,9 +1,9 @@
 -- ELRS_Finder.lua  (EdgeTX – Boxer B/W + TX15 MAX)
 -- Lost-model finder  ·  Geiger beep  +  signal strength pyramid
 --
--- Pyramid (right panel): number of bars = signal strength
---   5 bars = MAX  → keep going this direction
---   0 bars = none → try a different direction
+-- Pyramid (right panel): bars = signal TREND (fast_ema vs slow_ema)
+--   5 bars = MAX  → approaching the drone  (keep going!)
+--   0 bars = none → moving away from drone (turn around!)
 --
 -- Reset: ENT key  OR  tap anywhere in right panel (TX15 MAX touch)
 
@@ -137,9 +137,22 @@ local function run_func(event)
     -- Header: "TREND" centered in right panel (panel center = 360, MIDSIZE ~16px/char × 5 = ~80px)
     lcd.drawText(CX - 40, 8, "TREND", MIDSIZE)
 
-    -- Pyramid: bars 0-5 based on strength
+    -- Pyramid: bars 0-5 based on TREND (fast_ema - slow_ema)
+    --   positive diff  → approaching → more bars (up to 5)
+    --   negative diff  → moving away → fewer bars (down to 0)
+    --   diff ≈ 0       → stable     → 3 bars (neutral)
     -- y_bottom=160; full pyramid (5 bars) spans y=58 to y=159
-    local bars = math.min(5, math.floor(strength / 20))
+    local bars = 0
+    if raw then
+      local diff = fast_ema - slow_ema
+      if   diff >  10 then bars = 5
+      elseif diff >  4 then bars = 4
+      elseif diff > -2 then bars = 3
+      elseif diff > -6 then bars = 2
+      elseif diff > -10 then bars = 1
+      else                   bars = 0
+      end
+    end
     drawPyramid(CX, 160, bars)
 
     -- ── Comparison bars ─────────────────────────────────────────────────
