@@ -69,8 +69,8 @@ local function run_func(event)
   if raw then
     if avg      == nil then avg      = raw end
     avg = 0.50 * avg + 0.50 * raw   -- α=0.50: ~1 frame response (agile)
-    -- Map dBm to %: range -110..-67 dBm → 0..100%  (100% reached at ~50cm)
-    local str = clamp((avg + 110) * (100 / 43), 0, 100)
+    -- Map dBm to %: range -110..-43 dBm → 0..100%
+    local str = clamp((avg + 110) * (100 / 67), 0, 100)
     if fast_ema == nil then fast_ema = str end
     if slow_ema == nil then slow_ema = str end
     fast_ema = 0.50 * fast_ema + 0.50 * str
