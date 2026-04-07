@@ -43,7 +43,7 @@ local EVT_TOUCH = rawget(_G, "EVT_TOUCH_FIRST") or 0
 -- bars 0-5: drawn from bottom (widest) upward.  y_bottom = bottom edge.
 -- Uses only drawFilledRectangle (no drawLine colour issues on colour LCD)
 local function drawPyramid(cx, y_bottom, bars)
-  local WIDTHS = { 78, 60, 42, 24, 10 }  -- index 1=base(wide)…5=tip(narrow)
+  local WIDTHS = { 10, 24, 42, 60, 78 }  -- index 1=bottom(narrow)…5=top(wide) = inverted pyramid
   local RH  = 18   -- row height (px)
   local GAP = 3    -- gap between rows (px)
   for k = 1, bars do
@@ -111,16 +111,16 @@ local function run_func(event)
 
     -- Strength: label on own line, bar below (no right-side overlap with divider)
     lcd.drawText(6, 54, string.format("Strength: %d%%", math.floor(strength)), 0)
-    lcd.drawRectangle(6, 70, 220, 14)       -- right edge x=226, divider at x=237 ✓
-    lcd.drawFilledRectangle(7, 71, math.floor(strength * 218 / 100), 12, 0)
+    lcd.drawRectangle(6, 76, 220, 14)       -- y=76: 6px below text bottom (~70), right edge x=226 ✓
+    lcd.drawFilledRectangle(7, 77, math.floor(strength * 218 / 100), 12, 0)
 
-    lcd.drawText(6, 92, avg
+    lcd.drawText(6, 98, avg
       and string.format("Avg: %.1f dBm", avg)
       or  "Avg: ---", 0)
 
-    lcd.drawText(6, 112, string.format("Peak: %d%%", math.floor(peak_str)), 0)
+    lcd.drawText(6, 118, string.format("Peak: %d%%", math.floor(peak_str)), 0)
     if raw and peak_str > 0 then
-      lcd.drawText(6, 128, string.format("Gap:  %+d%%",
+      lcd.drawText(6, 134, string.format("Gap:  %+d%%",
         math.floor(strength - peak_str)), 0)
     end
 
@@ -134,8 +134,8 @@ local function run_func(event)
     -- ── Right panel ─────────────────────────────────────────────────────
     local CX = 360
 
-    -- Header
-    lcd.drawText(CX - 28, 8, "TREND", MIDSIZE)
+    -- Header: "TREND" centered in right panel (panel center = 360, MIDSIZE ~16px/char × 5 = ~80px)
+    lcd.drawText(CX - 40, 8, "TREND", MIDSIZE)
 
     -- Pyramid: bars 0-5 based on strength
     -- y_bottom=160; full pyramid (5 bars) spans y=58 to y=159
