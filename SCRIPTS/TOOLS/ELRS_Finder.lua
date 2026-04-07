@@ -36,9 +36,8 @@ local slow_ema  = nil   -- α=0.08: reacts in ~12 frames
 local peak_str  = 0     -- all-time peak strength 0-100 %
 
 -- ── Events ───────────────────────────────────────────────────────────
-local EVT_ENT   = EVT_ENTER_BREAK or 0x0059
--- Direct env lookup (rawget bypasses EdgeTX sandbox metamethods → wrong)
-local EVT_TOUCH = EVT_TOUCH_FIRST or 0
+local EVT_ENT    = EVT_ENTER_BREAK or 0x0059
+local wasTouched = false   -- leading-edge touch detection (poll-based)
 
 -- ── Pyramid drawing (TX15 MAX) ────────────────────────────────────────
 -- bars 0-5: drawn from bottom (widest) upward.  y_bottom = bottom edge.
@@ -64,13 +63,15 @@ local function run_func(event)
     avg = nil; fast_ema = nil; slow_ema = nil; peak_str = 0
   end
 
-  -- Reset on touch inside pyramid area (CX=360 ±50px wide, y=45-165)
-  if IS_LARGE and EVT_TOUCH ~= 0 and event == EVT_TOUCH then
-    -- Use type() check: rawget(_G,...) fails in EdgeTX sandbox environment
-    local ts = type(touchState) == "function" and touchState() or nil
-    if ts and ts.x >= 310 and ts.x <= 410 and ts.y >= 45 and ts.y <= 165 then
-      avg = nil; fast_ema = nil; slow_ema = nil; peak_str = 0
+  -- Reset on tap in pyramid area: poll-based (event constants unreliable on TX15 MAX)
+  if IS_LARGE and type(touchState) == "function" then
+    local ts = touchState()
+    if ts and not wasTouched then   -- leading edge only (first frame of new touch)
+      if ts.x >= 310 and ts.x <= 410 and ts.y >= 45 and ts.y <= 165 then
+        avg = nil; fast_ema = nil; slow_ema = nil; peak_str = 0
+      end
     end
+    wasTouched = (ts ~= nil)
   end
 
   -- Signal acquisition
@@ -147,9 +148,9 @@ local function run_func(event)
     local bars = 0
     if raw then
       local gap = strength - peak_str   -- 0 at peak, negative when moved away
-      if peak_str >= 90 then
-        bars = 5                        -- peak near 100% = drone is very close
-      elseif gap >= -3  then bars = 5  -- at/near peak → approaching (tightened from -5)
+      if strength >= 90 then
+        bars = 5                        -- current signal near 100% = drone is very close
+      elseif gap >= -3  then bars = 5  -- at/near peak → approaching
       elseif gap >= -8  then bars = 4  -- slight drop
       elseif gap >= -18 then bars = 3  -- moderate drop
       elseif gap >= -35 then bars = 2  -- significant drop
