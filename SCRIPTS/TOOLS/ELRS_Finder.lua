@@ -1,4 +1,4 @@
--- ELRS_Finder.lua  (EdgeTX – Boxer B/W + TX15 MAX)
+-- ELRS_Finder.lua  (EdgeTX – Boxer B/W + TX15 MAX / TX16S Mark II)
 -- Lost-model finder  ·  Geiger beep  +  signal strength pyramid
 --
 -- Pyramid (right panel): bars = Now vs Peak gap
@@ -10,7 +10,7 @@
 -- ── Screen detection ──────────────────────────────────────────────────
 local W        = LCD_W or 128
 local H        = LCD_H or 64
-local IS_LARGE = (W >= 320)   -- TX15 MAX = 480 ; Boxer = 128
+local IS_LARGE = (W >= 320)   -- TX15 MAX / TX16S Mark II = 480×272 ; Boxer = 128×64
 
 -- ── Signal state ──────────────────────────────────────────────────────
 local lastBeep = 0
@@ -93,7 +93,7 @@ local function run_func(event)
 
   if IS_LARGE then
     --------------------------------------------------------------------------
-    -- TX15 MAX  480×272
+    -- TX15 MAX / TX16S Mark II  480×272
     -- Left panel  (x   0-236): signal data
     -- Right panel (x 240-480): pyramid + comparison bars
     --------------------------------------------------------------------------

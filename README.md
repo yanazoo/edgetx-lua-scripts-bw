@@ -3,7 +3,7 @@
 EdgeTX Lua スクリプト集です。Radiomaster Boxer（128×64 白黒液晶）および **RadioMaster TX15 MAX（480×272 カラー液晶）** に対応しています。
 
 A growing collection of **EdgeTX Lua scripts** for Radiomaster, Jumper, and other OpenTX/EdgeTX radios.  
-Scripts support both **black-and-white displays** (Radiomaster Boxer 128×64) and **color touch displays** (TX15 MAX 480×272).
+Scripts support both **black-and-white displays** (Radiomaster Boxer 128×64) and **color touch displays** (TX15 MAX / TX16S Mark II 480×272).
 
 ## 📂 リポジトリ構成 / Repository Structure
 
@@ -39,6 +39,7 @@ Walk around with your radio — move in the direction that **grows the inverted 
 |---|---|---|
 | Radiomaster Boxer | 128×64 白黒 | テキスト表示（バー＋強度） |
 | RadioMaster TX15 MAX | 480×272 カラー | 2パネル表示（左: 数値、右: 逆ピラミッド） |
+| RadioMaster TX16S Mark II | 480×272 カラー | 2パネル表示（左: 数値、右: 逆ピラミッド） |
 
 #### TX15 MAX 画面レイアウト / TX15 MAX Screen Layout
 
