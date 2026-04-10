@@ -49,7 +49,7 @@ local function drawPyramid(cx, y_bottom, bars)
     local w = WIDTHS[k]
     -- Each row stacks upward: k=1 at bottom, k=5 at top
     local y = y_bottom - k * RH - (k - 1) * GAP
-    lcd.drawFilledRectangle(cx - w // 2, y, w, RH, 0)
+    lcd.drawFilledRectangle(cx - math.floor(w / 2), y, w, RH, 0)
   end
 end
 
